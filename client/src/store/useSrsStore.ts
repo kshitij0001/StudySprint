@@ -77,11 +77,14 @@ export const useSrsStore = create<SrsState>((set, get) => ({
 
   snoozeReview: async (taskId, days) => {
     const { reviewTasks } = get();
-    const updatedTasks = reviewTasks.map(task =>
-      task.id === taskId
-        ? { ...task, snoozedDays: days }
-        : task
-    );
+    const updatedTasks = reviewTasks.map(task => {
+      if (task.id === taskId) {
+        const currentDue = new Date(task.dueAt);
+        const newDue = new Date(currentDue.getTime() + days * 24 * 60 * 60 * 1000);
+        return { ...task, dueAt: newDue.toISOString() };
+      }
+      return task;
+    });
 
     await db.setReviewTasks(updatedTasks);
     set({ reviewTasks: updatedTasks });

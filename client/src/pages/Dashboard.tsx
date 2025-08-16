@@ -163,7 +163,7 @@ export default function Dashboard() {
         <CardHeader>
           <CardTitle className="flex items-center">
             <Clock className="mr-2 h-5 w-5" />
-            Upcoming Reviews (Next 7 Days)
+            Upcoming Reviews
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -200,63 +200,6 @@ export default function Dashboard() {
                       />
                     ))}
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Calendar View */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Clock className="mr-2 h-5 w-5" />
-            Review Calendar
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-7 gap-4 text-center">
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-              <div key={day} className="text-xs font-medium text-muted-foreground py-2">{day}</div>
-            ))}
-            {Array.from({ length: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate() }, (_, i) => {
-              const currentDate = new Date(new Date().getFullYear(), new Date().getMonth(), i + 1);
-              const dayReviews = reviewTasks.filter(task => 
-                !task.doneAt && isSameDay(new Date(task.dueAt), currentDate)
-              );
-              const subjectCounts = getSubjectCounts(dayReviews);
-
-              return (
-                <div
-                  key={i}
-                  className={`relative p-2 border rounded-md h-24 flex flex-col items-center justify-start ${
-                    isSameDay(currentDate, new Date()) ? 'border-primary' : ''
-                  }`}
-                >
-                  <span className={`text-sm font-medium ${isSameDay(currentDate, new Date()) ? 'text-primary' : ''}`}>
-                    {currentDate.getDate()}
-                  </span>
-                  <div className="flex flex-wrap gap-0.5 justify-center mt-1">
-                    {subjectCounts.map(({ subject, count, difficulty }) => (
-                      <div
-                        key={`${subject}-${difficulty}`}
-                        className={cn(
-                          'w-1.5 h-1.5 rounded-full',
-                          subject === 'Physics' && 'bg-blue-500',
-                          subject === 'Chemistry' && 'bg-green-500',
-                          subject === 'Biology' && 'bg-purple-500'
-                        )}
-                        style={{
-                          transform: `scale(${Math.min(1 + (count - 1) * 0.2, 1.5)})`
-                        }}
-                        title={`${subject}: ${count} reviews (${difficulty})`}
-                      />
-                    ))}
-                  </div>
-                  {dayReviews.length > 0 && (
-                    <div className="text-xs text-muted-foreground mt-1">{dayReviews.length} due</div>
-                  )}
                 </div>
               );
             })}
