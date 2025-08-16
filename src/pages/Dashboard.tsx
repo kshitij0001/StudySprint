@@ -1,29 +1,39 @@
 import React, { useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CountdownTimer } from '@/components/CountdownTimer';
 import { MicroMotivation } from '@/components/MicroMotivation';
 import { SrsQueue } from '@/components/SrsQueue';
 import { QuickAddStudy } from '@/components/QuickAddStudy';
 import { useSrsStore } from '@/store/useSrsStore';
 import { useSyllabusStore } from '@/store/useSyllabusStore';
-import { Flame, CheckCircle, Brain, Clock } from 'lucide-react';
+import { Flame, CheckCircle, Brain, Clock, BookOpen, Calendar, AlertTriangle } from 'lucide-react';
 
 export default function Dashboard() {
-  const { loadData, reviewTasks, getTodaysReviews, getOverdueReviews } = useSrsStore();
-  const { loadSyllabus } = useSyllabusStore();
+  const { loadData, reviewTasks, getTodaysReviews, getOverdueReviews, getUpcomingReviews, studySessions } = useSrsStore();
+  const { loadSyllabus, syllabus } = useSyllabusStore();
 
   useEffect(() => {
     loadData();
     loadSyllabus();
   }, [loadData, loadSyllabus]);
 
-  const todaysReviews = getTodaysReviews();
   const overdueReviews = getOverdueReviews();
-  const completedToday = todaysReviews.filter(task => task.doneAt).length;
-  const totalReviews = reviewTasks.length;
+  const todaysReviews = getTodaysReviews();
 
-  // Mock streak for now - would be calculated from actual study sessions
-  const streak = 12;
+  // Calculate total topics from syllabus
+  const totalTopics = syllabus.reduce((total, subject) => 
+    total + subject.chapters.reduce((chapterTotal, chapter) => 
+      chapterTotal + chapter.topics.length, 0), 0);
+
+  // Calculate this week's sessions
+  const thisWeekSessions = studySessions.filter(session => {
+    const sessionDate = new Date(session.createdAt);
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    return sessionDate >= weekAgo;
+  });
+
+  const streak = 12; // Mock streak for now - would be calculated from actual study sessions
 
   const stats = [
     {
@@ -35,14 +45,14 @@ export default function Dashboard() {
     },
     {
       title: 'Today Completed',
-      value: `${completedToday}/${todaysReviews.length}`,
+      value: `${todaysReviews.filter(task => task.doneAt).length}/${todaysReviews.length}`,
       icon: CheckCircle,
       color: 'text-blue-600 dark:text-blue-400',
       bgColor: 'bg-blue-100 dark:bg-blue-900/20'
     },
     {
       title: 'Total Reviews',
-      value: totalReviews.toLocaleString(),
+      value: reviewTasks.length.toLocaleString(),
       icon: Brain,
       color: 'text-purple-600 dark:text-purple-400',
       bgColor: 'bg-purple-100 dark:bg-purple-900/20'
@@ -104,10 +114,10 @@ export default function Dashboard() {
               date.setDate(date.getDate() + i + 1);
               const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
               const dayNumber = date.getDate();
-              
+
               // Mock data for upcoming reviews
               const mockCount = Math.floor(Math.random() * 10);
-              
+
               return (
                 <div key={i} className="text-center" data-testid={`upcoming-day-${i}`}>
                   <div className="text-xs text-muted-foreground mb-2">{dayName}</div>

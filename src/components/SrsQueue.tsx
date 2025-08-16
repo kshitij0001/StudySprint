@@ -67,26 +67,24 @@ export function SrsQueue() {
   ];
 
   return (
-    <Card className="lg:col-span-2">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>Today's Reviews</CardTitle>
-          <div className="flex items-center space-x-2">
-            {filterButtons.map(({ key, label }) => (
-              <Button
-                key={key}
-                variant={filterSubject === key ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setFilterSubject(key)}
-                data-testid={`filter-${key.toLowerCase()}`}
-              >
-                {label}
-              </Button>
-            ))}
-          </div>
+    <Card className="lg:col-span-2 glass border-0 h-full">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+        <CardTitle className="text-lg font-semibold">Today's Reviews</CardTitle>
+        <div className="flex items-center space-x-2">
+          {filterButtons.map(({ key, label }) => (
+            <Button
+              key={key}
+              variant={filterSubject === key ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setFilterSubject(key)}
+              data-testid={`filter-${key.toLowerCase()}`}
+            >
+              {label}
+            </Button>
+          ))}
         </div>
       </CardHeader>
-      
+
       <CardContent className="space-y-3 max-h-96 overflow-y-auto">
         {filteredReviews.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
@@ -108,7 +106,10 @@ export function SrsQueue() {
                   'flex items-center p-3 rounded-lg border transition-colors',
                   taskIsOverdue 
                     ? 'bg-destructive/10 border-destructive/20' 
-                    : 'border-border hover:bg-accent/50'
+                    : 'border-border hover:bg-accent/50',
+                  topicInfo.difficulty === 'Easy' && "difficulty-easy",
+                  topicInfo.difficulty === 'Medium' && "difficulty-medium",
+                  topicInfo.difficulty === 'Hard' && "difficulty-hard"
                 )}
                 data-testid={`review-task-${task.id}`}
               >
@@ -118,7 +119,7 @@ export function SrsQueue() {
                   className="mr-3"
                   data-testid={`checkbox-review-${task.id}`}
                 />
-                
+
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center space-x-2 mb-1">
                     <Badge 
@@ -149,7 +150,7 @@ export function SrsQueue() {
                     Due: {new Date(task.dueAt).toLocaleDateString()}
                   </p>
                 </div>
-                
+
                 <Button
                   variant="ghost"
                   size="sm"

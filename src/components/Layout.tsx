@@ -1,36 +1,43 @@
 import React from 'react';
+import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { MobileBottomNav } from './MobileBottomNav';
-import { Brain } from 'lucide-react';
+import { Button } from './ui/button';
+import { Moon, Sun } from 'lucide-react';
+import { useMobile } from '@/hooks/use-mobile';
+import { useTheme } from './ThemeProvider';
 
-interface LayoutProps {
-  children: React.ReactNode;
-}
+export function Layout() {
+  const isMobile = useMobile();
+  const { theme, setTheme } = useTheme();
 
-export function Layout({ children }: LayoutProps) {
   return (
-    <div className="min-h-screen flex bg-background">
-      <Sidebar />
-      
-      {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 bg-card border-b border-border z-50">
-        <div className="flex items-center justify-center p-4">
-          <h1 className="text-lg font-bold text-primary flex items-center">
-            <Brain className="mr-2 h-5 w-5" />
-            NEET 2026
-          </h1>
-        </div>
+    <div className="min-h-screen bg-background">
+      {!isMobile && <Sidebar />}
+
+      {/* Theme Toggle - Top Right */}
+      <div className="fixed top-4 right-4 z-40">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+          className="glass"
+        >
+          {theme === 'light' ? (
+            <Moon className="h-4 w-4" />
+          ) : (
+            <Sun className="h-4 w-4" />
+          )}
+        </Button>
       </div>
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-hidden">
-        <div className="h-full overflow-y-auto pt-16 lg:pt-0 pb-20 lg:pb-0">
-          {children}
+      <main className={`${!isMobile ? 'ml-64' : ''} ${isMobile ? 'pb-24' : ''} pt-16`}>
+        <div className="px-4 py-6">
+          <Outlet />
         </div>
       </main>
 
-      {/* Mobile Bottom Navigation */}
-      <MobileBottomNav />
+      {isMobile && <MobileBottomNav />}
     </div>
   );
 }

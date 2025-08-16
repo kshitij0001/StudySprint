@@ -1,41 +1,45 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   Home, 
-  BookOpen, 
   Calendar, 
-  Folder, 
-  TrendingUp, 
-  PieChart, 
-  Settings
+  BarChart3, 
+  Menu,
+  BookOpen,
+  Settings,
+  FileText,
+  X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const navigation = [
-  { name: 'Home', href: '/', icon: Home },
-  { name: 'Plan', href: '/plan', icon: BookOpen },
-  { name: 'Calendar', href: '/calendar', icon: Calendar },
-  { name: 'Files', href: '/files', icon: Folder },
-  { name: 'Tests', href: '/tests', icon: TrendingUp },
-  { name: 'Progress', href: '/progress', icon: PieChart },
-  { name: 'Settings', href: '/settings', icon: Settings },
+const mainNavItems = [
+  { to: '/', icon: Home, label: 'Dashboard' },
+  { to: '/calendar', icon: Calendar, label: 'Calendar' },
+  { to: '/progress', icon: BarChart3, label: 'Progress' },
+];
+
+const secondaryNavItems = [
+  { to: '/syllabus', icon: BookOpen, label: 'Syllabus' },
+  { to: '/tests', icon: FileText, label: 'Tests' },
+  { to: '/settings', icon: Settings, label: 'Settings' },
 ];
 
 export function MobileBottomNav() {
   const location = useLocation();
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
       
-      if (currentScrollY > lastScrollY && currentScrollY > 100) {
-        // Scrolling down & past threshold - hide nav
-        setIsVisible(false);
-      } else {
-        // Scrolling up - show nav
+      if (currentScrollY < lastScrollY || currentScrollY < 50) {
         setIsVisible(true);
+      } else if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        setIsVisible(false);
+        setIsMenuOpen(false);
       }
       
       setLastScrollY(currentScrollY);
@@ -45,36 +49,94 @@ export function MobileBottomNav() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
 
+  const isActive = (path: string) => location.pathname === path;
+
   return (
-    <nav 
-      className={cn(
-        'lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50 transition-transform duration-300',
-        isVisible ? 'translate-y-0' : 'translate-y-full'
+    <>
+      {/* Backdrop blur when menu is open */}
+      {isMenuOpen && (
+        <div 
+          className="fixed inset-0 z-40 blur-background bg-black/20"
+          onClick={() => setIsMenuOpen(false)}
+        />
       )}
-    >
-      <div className="grid grid-cols-7 gap-1 px-2 py-2">
-        {navigation.map((item) => {
-          const Icon = item.icon;
-          const isActive = location.pathname === item.href;
-          
-          return (
-            <Link
-              key={item.name}
-              to={item.href}
+
+      {/* Bottom Navigation */}
+      <nav 
+        className={cn(
+          "fixed bottom-0 left-0 right-0 z-50 transition-transform duration-300 ease-in-out",
+          isVisible ? "translate-y-0" : "translate-y-full"
+        )}
+      >
+        {/* Secondary Menu */}
+        {isMenuOpen && (
+          <div className="glass-popup mx-4 mb-2 p-3">
+            <div className="grid grid-cols-3 gap-3">
+              {secondaryNavItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    onClick={() => setIsMenuOpen(false)}
+                    className={cn(
+                      "flex flex-col items-center justify-center p-3 rounded-lg transition-colors",
+                      isActive(item.to)
+                        ? "text-primary bg-primary/10"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    )}
+                  >
+                    <Icon className="w-5 h-5 mb-1" />
+                    <span className="text-xs font-medium">{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Main Bottom Bar */}
+        <div className="glass px-4 py-2 mx-4 mb-4 rounded-2xl">
+          <div className="flex items-center justify-around">
+            {mainNavItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className={cn(
+                    "flex flex-col items-center justify-center p-3 rounded-lg transition-colors min-w-[60px]",
+                    isActive(item.to)
+                      ? "text-primary bg-primary/10"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <Icon className="w-5 h-5 mb-1" />
+                  <span className="text-xs font-medium">{item.label}</span>
+                </Link>
+              );
+            })}
+            
+            {/* Hamburger Menu Button */}
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
               className={cn(
-                'flex flex-col items-center justify-center p-2 rounded-lg text-xs font-medium transition-colors min-h-[60px]',
-                isActive
-                  ? 'text-primary bg-primary/10'
-                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                "flex flex-col items-center justify-center p-3 rounded-lg transition-colors min-w-[60px]",
+                isMenuOpen
+                  ? "text-primary bg-primary/10"
+                  : "text-muted-foreground hover:text-foreground"
               )}
-              data-testid={`mobile-nav-${item.name.toLowerCase()}`}
             >
-              <Icon className="w-5 h-5 mb-1" />
-              <span className="text-[10px] leading-tight">{item.name}</span>
-            </Link>
-          );
-        })}
-      </div>
-    </nav>
+              {isMenuOpen ? (
+                <X className="w-5 h-5 mb-1" />
+              ) : (
+                <Menu className="w-5 h-5 mb-1" />
+              )}
+              <span className="text-xs font-medium">More</span>
+            </button>
+          </div>
+        </div>
+      </nav>
+    </>
   );
 }

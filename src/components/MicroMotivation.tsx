@@ -14,10 +14,10 @@ export function MicroMotivation() {
   }, []);
 
   return (
-    <Card className="p-6 border-border">
+    <Card className="glass p-6 border-0">
       <div className="text-center">
-        <div className="text-2xl mb-2"></div>
-        <p className="text-sm text-muted-foreground font-medium" data-testid="text-motivation">
+        <div className="text-2xl mb-2">💪</div>
+        <p className="text-sm text-foreground font-medium" data-testid="text-motivation">
           {motivation}
         </p>
       </div>
