@@ -53,6 +53,19 @@ export function QuickAddStudy() {
   const selectedChapterData = selectedSubjectData?.chapters.find(c => c.id === selectedChapter);
   const selectedTopicData = selectedChapterData?.topics.find(t => t.id === selectedTopic);
 
+  // Handle custom chapter/topic selection
+  React.useEffect(() => {
+    if (selectedChapter === 'add_new_chapter') {
+      setIsAddingCustomChapter(true);
+    }
+  }, [selectedChapter]);
+
+  React.useEffect(() => {
+    if (selectedTopic === 'add_new_topic') {
+      setIsAddingCustomTopic(true);
+    }
+  }, [selectedTopic]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -102,9 +115,9 @@ export function QuickAddStudy() {
   };
 
   const difficultyButtons = [
-    { value: 'Easy' as Difficulty, color: '#16a34a' },
-    { value: 'Medium' as Difficulty, color: '#f59e0b' },
-    { value: 'Hard' as Difficulty, color: '#dc2626' }
+    { value: 'Easy' as Difficulty, color: '#16a34a', bgColor: '#dcfce7', textColor: '#15803d' },
+    { value: 'Medium' as Difficulty, color: '#f59e0b', bgColor: '#fef3c7', textColor: '#d97706' },
+    { value: 'Hard' as Difficulty, color: '#dc2626', bgColor: '#fee2e2', textColor: '#dc2626' }
   ];
 
   return (
@@ -154,10 +167,6 @@ export function QuickAddStudy() {
                   ))}
                   <SelectItem 
                     value="add_new_chapter"
-                    onSelect={() => {
-                      setSelectedChapter('add_new_chapter');
-                      setIsAddingCustomChapter(true);
-                    }}
                   >
                     + Add New Chapter
                   </SelectItem>
@@ -180,11 +189,7 @@ export function QuickAddStudy() {
                     </SelectItem>
                   ))}
                   <SelectItem 
-                    value="add_new_topic" 
-                    onSelect={() => {
-                      setSelectedTopic('add_new_topic');
-                      setIsAddingCustomTopic(true);
-                    }}
+                    value="add_new_topic"
                   >
                     + Add New Topic
                   </SelectItem>
@@ -259,18 +264,20 @@ export function QuickAddStudy() {
             <div>
               <Label>Difficulty</Label>
               <div className="flex space-x-2 mt-2">
-                {difficultyButtons.map(({ value, color }) => (
+                {difficultyButtons.map(({ value, color, bgColor, textColor }) => (
                   <Button
                     key={value}
                     type="button"
+                    variant="outline"
                     style={{ 
-                      backgroundColor: selectedDifficulty === value ? color : 'transparent', 
-                      color: selectedDifficulty === value ? 'white' : color,
-                      borderColor: color
+                      backgroundColor: selectedDifficulty === value ? color : bgColor, 
+                      color: selectedDifficulty === value ? 'white' : textColor,
+                      borderColor: color,
+                      borderWidth: '2px'
                     }}
                     size="sm"
                     onClick={() => setSelectedDifficulty(value)}
-                    className="flex-1 border-2 hover:opacity-80 transition-all"
+                    className="flex-1 hover:opacity-80 transition-all font-medium"
                     data-testid={`button-difficulty-${value.toLowerCase()}`}
                   >
                     {value}
