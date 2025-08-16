@@ -12,6 +12,7 @@ interface SrsState {
   addStudySession: (topicRef: TopicRef, notes?: string) => Promise<void>;
   markReviewComplete: (taskId: string) => Promise<void>;
   snoozeReview: (taskId: string, days: number) => Promise<void>;
+  removeReviewTask: (taskId: string) => Promise<void>;
   getTodaysReviews: () => ReviewTask[];
   getOverdueReviews: () => ReviewTask[];
   getUpcomingReviews: (days: number) => ReviewTask[];
@@ -81,6 +82,14 @@ export const useSrsStore = create<SrsState>((set, get) => ({
         ? { ...task, snoozedDays: days }
         : task
     );
+
+    await db.setReviewTasks(updatedTasks);
+    set({ reviewTasks: updatedTasks });
+  },
+
+  removeReviewTask: async (taskId) => {
+    const { reviewTasks } = get();
+    const updatedTasks = reviewTasks.filter(task => task.id !== taskId);
 
     await db.setReviewTasks(updatedTasks);
     set({ reviewTasks: updatedTasks });

@@ -1,16 +1,20 @@
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { ChevronLeft, ChevronRight, Plus, Clock, Trash2, Check } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, startOfWeek, endOfWeek } from 'date-fns';
 import { useSrsStore } from '@/store/useSrsStore';
 import { useSyllabusStore } from '@/store/useSyllabusStore';
 import { isOverdue } from '@/lib/srs';
+import { cn } from '@/lib/utils';
 
 export default function Calendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<'month' | 'week' | 'day'>('month');
-  const { studySessions, reviewTasks } = useSrsStore();
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const { studySessions, reviewTasks, markReviewComplete, snoozeReview, removeReviewTask } = useSrsStore();
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -215,6 +219,7 @@ export default function Calendar() {
                       : 'border-border hover:bg-accent/50'
                   } ${!isCurrentMonth ? 'opacity-30' : ''}`}
                   data-testid={`calendar-day-${format(day, 'yyyy-MM-dd')}`}
+                  onClick={() => setSelectedDay(day)}
                 >
                   <div className={`text-sm mb-1 ${
                     isDayToday 
@@ -248,6 +253,52 @@ export default function Calendar() {
         </CardContent>
       </Card>
 
+      {/* Day View Modal */}
+      <Dialog open={!!selectedDay} onOpenChange={() => setSelectedDay(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedDay && format(selectedDay, 'EEEE, MMMM d, yyyy')}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 max-h-96 overflow-y-auto">
+            {selectedDay && (() => {
+              const dayTasks = getEventsForDay(selectedDay);
+              const reviewTasksForDay = reviewTasks.filter(task => 
+                !task.doneAt && isSameDay(new Date(task.dueAt), selectedDay)
+              );
+              
+              if (dayTasks.length === 0) {
+                return (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>No tasks for this day</p>
+                  </div>
+                );
+              }
+
+              return reviewTasksForDay.map((task) => {
+                const topicInfo = getTopicInfo(task.sessionId);
+                if (!topicInfo) return null;
+
+                const taskIsOverdue = isOverdue(task);
+
+                return (
+                  <SwipeableTaskCard
+                    key={task.id}
+                    task={task}
+                    topicInfo={topicInfo}
+                    isOverdue={taskIsOverdue}
+                    onComplete={() => markReviewComplete(task.id)}
+                    onSnooze={() => snoozeReview(task.id, 1)}
+                    onRemove={() => removeReviewTask(task.id)}
+                  />
+                );
+              });
+            })()}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Legend */}
       <Card>
         <CardContent className="p-6">
@@ -270,8 +321,197 @@ export default function Calendar() {
               <span className="text-sm">Overdue Reviews</span>
             </div>
           </div>
+          <div className="mt-4 pt-4 border-t border-border">
+            <p className="text-sm text-muted-foreground">
+              <strong>Swipe gestures:</strong> ← Remove | → Complete | ↑ Snooze
+            </p>
+          </div>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+// Swipeable Task Card Component
+interface SwipeableTaskCardProps {
+  task: any;
+  topicInfo: any;
+  isOverdue: boolean;
+  onComplete: () => void;
+  onSnooze: () => void;
+  onRemove: () => void;
+}
+
+function SwipeableTaskCard({ task, topicInfo, isOverdue, onComplete, onSnooze, onRemove }: SwipeableTaskCardProps) {
+  const [dragOffset, setDragOffset] = React.useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = React.useState(false);
+  const [startPos, setStartPos] = React.useState({ x: 0, y: 0 });
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    setStartPos({ x: touch.clientX, y: touch.clientY });
+    setIsDragging(true);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging) return;
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - startPos.x;
+    const deltaY = touch.clientY - startPos.y;
+    setDragOffset({ x: deltaX, y: deltaY });
+  };
+
+  const handleTouchEnd = () => {
+    if (!isDragging) return;
+    
+    const threshold = 100;
+    
+    // Left swipe - Remove
+    if (dragOffset.x < -threshold) {
+      onRemove();
+    }
+    // Right swipe - Complete
+    else if (dragOffset.x > threshold) {
+      onComplete();
+    }
+    // Up swipe - Snooze
+    else if (dragOffset.y < -threshold) {
+      onSnooze();
+    }
+    
+    setDragOffset({ x: 0, y: 0 });
+    setIsDragging(false);
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setStartPos({ x: e.clientX, y: e.clientY });
+    setIsDragging(true);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    const deltaX = e.clientX - startPos.x;
+    const deltaY = e.clientY - startPos.y;
+    setDragOffset({ x: deltaX, y: deltaY });
+  };
+
+  const handleMouseUp = () => {
+    if (!isDragging) return;
+    
+    const threshold = 100;
+    
+    if (dragOffset.x < -threshold) {
+      onRemove();
+    } else if (dragOffset.x > threshold) {
+      onComplete();
+    } else if (dragOffset.y < -threshold) {
+      onSnooze();
+    }
+    
+    setDragOffset({ x: 0, y: 0 });
+    setIsDragging(false);
+  };
+
+  const getSwipeIndicator = () => {
+    const threshold = 50;
+    if (Math.abs(dragOffset.x) > threshold || Math.abs(dragOffset.y) > threshold) {
+      if (dragOffset.x < -threshold) return { icon: Trash2, color: 'text-red-500', bg: 'bg-red-100' };
+      if (dragOffset.x > threshold) return { icon: Check, color: 'text-green-500', bg: 'bg-green-100' };
+      if (dragOffset.y < -threshold) return { icon: Clock, color: 'text-blue-500', bg: 'bg-blue-100' };
+    }
+    return null;
+  };
+
+  const indicator = getSwipeIndicator();
+
+  return (
+    <div
+      className={cn(
+        'relative flex items-center p-3 rounded-lg border transition-all duration-200 select-none touch-none',
+        isOverdue 
+          ? 'bg-destructive/10 border-destructive/20' 
+          : 'border-border hover:bg-accent/50',
+        isDragging && 'shadow-lg scale-105'
+      )}
+      style={{
+        transform: `translate(${dragOffset.x}px, ${dragOffset.y}px)`,
+      }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+    >
+      {/* Swipe Indicator */}
+      {indicator && (
+        <div className={cn(
+          'absolute inset-0 flex items-center justify-center rounded-lg opacity-70',
+          indicator.bg
+        )}>
+          <indicator.icon className={cn('w-8 h-8', indicator.color)} />
+        </div>
+      )}
+      
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center space-x-2 mb-1">
+          <Badge 
+            variant="secondary"
+            className={cn(
+              topicInfo.subject === 'Physics' && 'physics-color',
+              topicInfo.subject === 'Chemistry' && 'chemistry-color',
+              topicInfo.subject === 'Biology' && 'biology-color'
+            )}
+          >
+            {topicInfo.subject}
+          </Badge>
+          <Badge 
+            variant={topicInfo.difficulty === 'Hard' ? 'destructive' : topicInfo.difficulty === 'Medium' ? 'default' : 'secondary'}
+          >
+            {topicInfo.difficulty}
+          </Badge>
+          {isOverdue && (
+            <Badge variant="destructive" className="text-xs">
+              Overdue
+            </Badge>
+          )}
+        </div>
+        <p className="text-sm font-medium">
+          {topicInfo.chapter} → {topicInfo.topic}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Due: {new Date(task.dueAt).toLocaleDateString()}
+        </p>
+      </div>
+      
+      {/* Action buttons for non-touch devices */}
+      <div className="flex space-x-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onSnooze}
+          className="hidden md:flex"
+        >
+          <Clock className="w-4 h-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onComplete}
+          className="hidden md:flex"
+        >
+          <Check className="w-4 h-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onRemove}
+          className="hidden md:flex"
+        >
+          <Trash2 className="w-4 h-4" />
+        </Button>
+      </div>
     </div>
   );
 }
