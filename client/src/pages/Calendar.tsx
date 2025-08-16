@@ -33,19 +33,28 @@ export default function Calendar() {
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   // Get events from study sessions and review tasks
+  const getSubjectPrefix = (subject: string) => {
+    switch (subject) {
+      case 'Physics': return 'Phy.';
+      case 'Chemistry': return 'Chem.';
+      case 'Biology': return 'Bio.';
+      default: return subject.slice(0, 3) + '.';
+    }
+  };
+
   const events = [
     ...studySessions.map(session => ({
       date: new Date(session.createdAt),
       type: 'study',
       subject: session.subject,
-      title: `Study: ${session.topicName || 'Topic'}`,
+      title: `${getSubjectPrefix(session.subject)} ${session.topicName || 'Topic'}`,
       difficulty: session.difficulty
     })),
     ...reviewTasks.map(task => ({
       date: new Date(task.dueDate),
       type: task.isOverdue ? 'overdue' : 'review',
       subject: task.subject,
-      title: `Review: ${task.topicName || 'Topic'}`,
+      title: `${getSubjectPrefix(task.subject)} ${task.topicName || 'Topic'}`,
       difficulty: task.difficulty
     }))
   ];
@@ -59,10 +68,11 @@ export default function Calendar() {
       return 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-l-2 border-red-500';
     }
     
-    switch (event.subject) {
-      case 'Physics': return 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-l-2 border-blue-500';
-      case 'Chemistry': return 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-l-2 border-green-500';
-      case 'Biology': return 'bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border-l-2 border-purple-500';
+    // Color based on difficulty
+    switch (event.difficulty) {
+      case 'Easy': return 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-l-2 border-green-500';
+      case 'Medium': return 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 border-l-2 border-yellow-500';
+      case 'Hard': return 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-l-2 border-red-500';
       default: return 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-l-2 border-gray-500';
     }
   };
@@ -197,19 +207,19 @@ export default function Calendar() {
           <h3 className="font-semibold mb-4">Legend</h3>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="flex items-center">
-              <div className="w-4 h-4 bg-blue-500 rounded mr-2"></div>
-              <span className="text-sm">Physics Reviews</span>
-            </div>
-            <div className="flex items-center">
               <div className="w-4 h-4 bg-green-500 rounded mr-2"></div>
-              <span className="text-sm">Chemistry Reviews</span>
+              <span className="text-sm">Easy Topics</span>
             </div>
             <div className="flex items-center">
-              <div className="w-4 h-4 bg-purple-500 rounded mr-2"></div>
-              <span className="text-sm">Biology Reviews</span>
+              <div className="w-4 h-4 bg-yellow-500 rounded mr-2"></div>
+              <span className="text-sm">Medium Topics</span>
             </div>
             <div className="flex items-center">
               <div className="w-4 h-4 bg-red-500 rounded mr-2"></div>
+              <span className="text-sm">Hard Topics</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-4 h-4 bg-red-600 rounded mr-2"></div>
               <span className="text-sm">Overdue Reviews</span>
             </div>
           </div>

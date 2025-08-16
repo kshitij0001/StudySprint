@@ -16,6 +16,7 @@ interface SyllabusState {
   getFilteredSyllabus: () => Syllabus[];
   addTopic: (chapterId: string, name: string, difficulty: Difficulty) => string;
   addChapter: (subjectName: Subject, name: string, difficulty: Difficulty) => string;
+  updateTopicDifficulty: (topicId: string, difficulty: Difficulty) => void;
 }
 
 export const useSyllabusStore = create<SyllabusState>((set, get) => ({
@@ -122,5 +123,23 @@ export const useSyllabusStore = create<SyllabusState>((set, get) => ({
     });
 
     return newChapterId;
+  },
+
+  updateTopicDifficulty: (topicId: string, difficulty: Difficulty) => {
+    set((state) => {
+      const updatedSyllabus = state.syllabus.map(subject => ({
+        ...subject,
+        chapters: subject.chapters.map(chapter => ({
+          ...chapter,
+          topics: chapter.topics.map(topic => 
+            topic.id === topicId 
+              ? { ...topic, difficulty }
+              : topic
+          )
+        }))
+      }));
+
+      return { syllabus: updatedSyllabus };
+    });
   },
 }));

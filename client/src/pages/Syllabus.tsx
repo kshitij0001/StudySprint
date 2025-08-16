@@ -21,7 +21,8 @@ export default function Syllabus() {
     setSelectedDifficulty,
     getFilteredSyllabus,
     addChapter,
-    addTopic
+    addTopic,
+    updateTopicDifficulty
   } = useSyllabusStore();
 
   const [expandedSubjects, setExpandedSubjects] = useState<Set<string>>(new Set());
@@ -270,18 +271,19 @@ export default function Syllabus() {
                                 >
                                   <div>
                                     <p className="font-medium text-sm">{topic.name}</p>
-                                    <Badge
-                                      variant="secondary"
-                                      className="text-white border-0"
-                                      style={{
-                                        backgroundColor: topic.difficulty === 'Easy' ? '#16a34a' :
-                                                       topic.difficulty === 'Medium' ? '#f59e0b' :
-                                                       topic.difficulty === 'Hard' ? '#dc2626' : '#6b7280',
-                                        color: 'white'
-                                      }}
+                                    <Select 
+                                      value={topic.difficulty} 
+                                      onValueChange={(value: Difficulty) => updateTopicDifficulty(topic.id, value)}
                                     >
-                                      {topic.difficulty}
-                                    </Badge>
+                                      <SelectTrigger className="w-24 h-6 text-xs">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="Easy">Easy</SelectItem>
+                                        <SelectItem value="Medium">Medium</SelectItem>
+                                        <SelectItem value="Hard">Hard</SelectItem>
+                                      </SelectContent>
+                                    </Select>
                                   </div>
                                   <div className="flex items-center space-x-2">
                                     <Select defaultValue={topic.status || "not-started"}>
