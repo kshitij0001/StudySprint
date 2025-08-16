@@ -269,15 +269,18 @@ export function QuickAddStudy() {
                     key={value}
                     type="button"
                     variant="outline"
-                    style={{ 
-                      backgroundColor: selectedDifficulty === value ? color : bgColor, 
-                      color: selectedDifficulty === value ? 'white' : textColor,
-                      borderColor: color,
-                      borderWidth: '2px'
-                    }}
                     size="sm"
                     onClick={() => setSelectedDifficulty(value)}
-                    className="flex-1 hover:opacity-80 transition-all font-medium"
+                    className={`flex-1 font-medium transition-all duration-200 backdrop-blur-sm border-2 ${
+                      selectedDifficulty === value 
+                        ? `text-white shadow-lg backdrop-blur-md` 
+                        : `bg-white/60 dark:bg-gray-800/60 hover:bg-white/80 dark:hover:bg-gray-800/80 backdrop-blur-md`
+                    }`}
+                    style={{
+                      backgroundColor: selectedDifficulty === value ? color : undefined,
+                      borderColor: color,
+                      color: selectedDifficulty === value ? 'white' : textColor,
+                    }}
                     data-testid={`button-difficulty-${value.toLowerCase()}`}
                   >
                     {value}

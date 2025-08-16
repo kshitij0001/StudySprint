@@ -3,10 +3,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, startOfWeek, endOfWeek } from 'date-fns';
+import { useSrsStore } from '@/store/useSrsStore';
 
 export default function Calendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<'month' | 'week' | 'day'>('month');
+  const { studySessions, reviewTasks } = useSrsStore();
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -30,19 +32,38 @@ export default function Calendar() {
 
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-  // No events initially - will be populated from actual data
-  const events: any[] = [];
+  // Get events from study sessions and review tasks
+  const events = [
+    ...studySessions.map(session => ({
+      date: new Date(session.createdAt),
+      type: 'study',
+      subject: session.subject,
+      title: `Study: ${session.topicName || 'Topic'}`,
+      difficulty: session.difficulty
+    })),
+    ...reviewTasks.map(task => ({
+      date: new Date(task.dueDate),
+      type: task.isOverdue ? 'overdue' : 'review',
+      subject: task.subject,
+      title: `Review: ${task.topicName || 'Topic'}`,
+      difficulty: task.difficulty
+    }))
+  ];
 
   const getEventsForDay = (day: Date) => {
     return events.filter(event => isSameDay(event.date, day));
   };
 
-  const getEventColor = (subject: string) => {
-    switch (subject) {
-      case 'Physics': return 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300';
-      case 'Chemistry': return 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300';
-      case 'Biology': return 'bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300';
-      default: return 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300';
+  const getEventColor = (event: any) => {
+    if (event.type === 'overdue') {
+      return 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-l-2 border-red-500';
+    }
+    
+    switch (event.subject) {
+      case 'Physics': return 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-l-2 border-blue-500';
+      case 'Chemistry': return 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-l-2 border-green-500';
+      case 'Biology': return 'bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border-l-2 border-purple-500';
+      default: return 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-l-2 border-gray-500';
     }
   };
 
@@ -151,7 +172,7 @@ export default function Calendar() {
                     {dayEvents.slice(0, 3).map((event, eventIndex) => (
                       <div
                         key={eventIndex}
-                        className={`text-xs p-1 rounded truncate ${getEventColor(event.subject)}`}
+                        className={`text-xs p-1 rounded truncate ${getEventColor(event)}`}
                         title={event.title}
                       >
                         {event.title}
