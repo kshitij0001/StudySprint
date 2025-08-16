@@ -1,0 +1,373 @@
+Build me a NEET 2026 Spaced‑Revision Web App (Bolt → GitHub Pages)
+
+I want you to generate a production‑ready React + TypeScript app that I can deploy to GitHub Pages. The app helps me prepare for NEET UG 2026 with spaced repetition, a calendar, preloaded syllabus, PDF folders, tests & analytics, a tiny brutal‑motivation corner (no heading), and a countdown to NEET 2026.
+
+
+---
+
+Tech Stack (strict)
+
+React + TypeScript
+
+Vite for bundling
+
+Tailwind CSS for styling
+
+shadcn/ui components with Radix UI
+
+Zustand for global state management
+
+React Router v6 for routing
+
+date-fns for date math
+
+idb-keyval (or Dexie) for IndexedDB storage (persistent, offline‑friendly)
+
+Recharts for charts
+
+Heroicons or lucide-react for icons
+
+JSZip for zipped backups/exports
+
+No server required; app must be fully static and work on GitHub Pages. All data in IndexedDB with a simple import/export.
+
+
+> Provide a Makefile or npm scripts for common tasks. Include a polished README with setup + deploy steps.
+
+
+
+
+---
+
+Routes / Pages
+
+1. / (Dashboard)
+
+Today’s due revisions (SRS queue)
+
+Quick add: Topic studied today → auto‑schedule future revisions on D+4, D+7, D+14, D+28, D+40.
+
+Streak indicator, quick filters (subject, difficulty), search.
+
+Brutal motivation micro‑corner (tiny text, no heading) with 1‑line punchy strings rotating daily.
+
+Countdown to NEET 2026 (configurable via settings; default target date in .env as VITE_NEET_DATE=2026-05-03T09:00:00+05:30).
+
+
+
+2. /plan (Syllabus & Add Study)
+
+Tree/table view of NEET 2025/26 syllabus preloaded: Subject → Chapter (difficulty: Easy/Med/Hard) → Topics (each with difficulty).
+
+Dropdowns to mark coverage status (Not started / In progress / Done), and Add study session which schedules the spaced revisions.
+
+Bulk‑add topics; CSV import optional.
+
+
+
+3. /calendar
+
+Month/Week/Day views showing: study sessions created, and all scheduled SRS reviews.
+
+Drag to reschedule a due review within ±3 days (preserve future intervals relative to the new base).
+
+Add personal events (exams, mocks, holidays).
+
+
+
+4. /files
+
+Subject‑wise folders for storing links to PDFs (local file references stored in IndexedDB with file name, size, and optional tags). Allow upload to browser storage (IndexedDB as Blobs). Provide preview link (use built‑in browser PDF viewer).
+
+Tagging, search, and drag‑drop between folders.
+
+
+
+5. /tests
+
+Log tests with metadata: date, duration, source, syllabus covered.
+
+Marks captured overall and subject‑wise (Physics/Chemistry/Biology) + optional topic‑level entries.
+
+Charts: score trends, subject balance, accuracy by difficulty buckets.
+
+Compute rolling averages (7/30 days), best/worst chapters, time‑since‑last‑mistake for top chapters.
+
+
+
+6. /progress
+
+Coverage heatmaps: chapters done, topics attempted, % mastery by difficulty.
+
+SRS health: reviews done on time vs late, upcoming load forecast for next 14 days.
+
+Export buttons: Backup (.zip) including JSON DB + settings; CSV for tests; JSON for SRS cards.
+
+
+
+7. /settings
+
+NEET target date/time (for countdown)
+
+Data import/export (JSON/ZIP)
+
+Theme (light/dark), compact mode
+
+Reset all data (with double confirm)
+
+
+
+
+
+---
+
+Spaced Repetition (SRS) Rules
+
+When I add a study session on Day 0 (today), automatically create review tasks for Day +4, +7, +14, +28, +40. If created late at night, still treat that calendar day as D0.
+
+Each SRS Card references: subject, chapter, topic, difficulty, source (notes/PDF/test), D0 timestamp, and the series of due dates.
+
+If I mark a review Done, do not extend; the series is fixed to those 5 future dates.
+
+If I miss a review: show as Overdue. When completed, keep remaining future reviews unchanged, but mark lateness.
+
+Allow snooze (1–3 days) per card; prompt if this increases clash in next 7 days.
+
+Provide a Today queue that orders by: Overdue first (oldest), then due today (hard→easy), then optional upcoming.
+
+
+Data Model (TypeScript)
+
+// subjects are: "Physics", "Chemistry", "Biology"
+export type Difficulty = 'Easy' | 'Medium' | 'Hard';
+
+export interface TopicRef { id: string; subject: string; chapterId: string; topicId: string; difficulty: Difficulty; }
+
+export interface StudySession {
+  id: string;
+  topic: TopicRef;
+  createdAt: string; // ISO
+  notes?: string;
+}
+
+export interface ReviewTask {
+  id: string;
+  sessionId: string; // links to StudySession
+  dueAt: string;     // ISO
+  doneAt?: string;   // ISO when completed
+  snoozedDays?: number; // 0–3
+}
+
+export interface PdfFile {
+  id: string; subject: string; folder: string; name: string; size: number; tags: string[]; blobId?: string; url?: string; addedAt: string; }
+
+export interface TestEntry {
+  id: string; date: string; source?: string; durationMin?: number;
+  scoreOverall: number; maxOverall: number;
+  scorePhysics?: number; scoreChemistry?: number; scoreBiology?: number;
+  byTopic?: Array<{ subject: string; chapterId: string; topicId: string; difficulty: Difficulty; correct: number; total: number; }>;
+}
+
+export interface Settings { targetDateISO: string; theme: 'light'|'dark'; compact: boolean; }
+
+SRS Scheduling Helper
+
+const OFFSETS = [0, 4, 7, 14, 28, 40];
+// given a creation Date, generate due dates at local midnight for these offsets
+
+Use date-fns to compute local‑midnight due dates.
+
+Store all dates as ISO strings (local time preserved).
+
+
+
+---
+
+Preloaded NEET Syllabus Seed
+
+Create /src/data/neet_syllabus.ts exporting a nested structure:
+
+export interface Chapter { id: string; name: string; difficulty: Difficulty; topics: Array<{ id: string; name: string; difficulty: Difficulty; }>; }
+export interface Syllabus { subject: 'Physics'|'Chemistry'|'Biology'; chapters: Chapter[]; }
+export const SYLLABUS: Syllabus[] = [ /* full list */ ];
+
+Include the full NEET syllabus (NCERT Class 11 & 12) for Physics, Chemistry (Physical/Organic/Inorganic), and Biology (Botany/Zoology), each chapter with 10–30 granular topics. Assign reasonable default difficulty (can be adjusted in UI).
+
+Provide a small search and filters (subject/difficulty/coverage).
+
+
+> If the full dataset is too long for a single file, split into /src/data/syllabus/*.ts and combine in an index.
+
+
+
+
+---
+
+UI/UX Requirements
+
+Clean, minimal, mobile‑first; large touch targets; keyboard shortcuts on desktop.
+
+Use shadcn/ui Card, Button, Badge, Dialog, Tabs, DropdownMenu, Table, Calendar (or build with Radix primitives).
+
+Dashboard shows:
+
+Today queue with checkboxes; chips for subject & difficulty
+
+Quick‑Add: Subject → Chapter → Topic dropdowns populated from Syllabus; notes textarea
+
+Streak + daily reviews completed
+
+Micro‑corner brutal motivation (1‑line, no heading) – rotate from a small list like: "No excuses. Do one more.", "Less talk, more reps.", "Hard now, easy later.", "Win the hour.", "Be undeniable."
+
+Countdown tile (days : hours : minutes : seconds) to target date
+
+
+Calendar: month grid with colored dots (subject), tooltips, click to open review list for that day.
+
+Files: grid of subject folders; inside, list of PDFs with tags; upload (Blob into IndexedDB) + open; rename/move/delete; quick tag filters.
+
+Tests: form for scores; charts using Recharts (line for overall trend, stacked bars for subject split; pie for difficulty accuracy). No custom colors—use defaults.
+
+Progress: coverage bars per subject; donut for difficulty distribution; table of late vs on‑time reviews; 14‑day forecast of due counts.
+
+Toasts for success/errors. All destructive actions need confirm dialogs.
+
+
+
+---
+
+State & Persistence
+
+Use Zustand slices: syllabus, sessions, reviews, files, tests, settings.
+
+Persist to IndexedDB using idb-keyval helpers. Load on app start; show skeletons while hydrating.
+
+Provide Export → single ZIP: JSON dumps (db/*.json) + optional file blobs; Import reverses it (merge or replace).
+
+
+
+---
+
+Components (key)
+
+SrsQueue (today/overdue list + actions)
+
+QuickAddStudy (subject→chapter→topic selectors, difficulty, notes)
+
+CalendarView (month/week with due counts)
+
+FilesManager (folders, upload, preview, tags)
+
+TestsForm / TestsTable / TestsCharts
+
+ProgressCards (coverage, SRS health, forecasts)
+
+Countdown (to target date)
+
+MicroMotivation (no heading; tiny text; daily rotation)
+
+
+
+---
+
+Testing & Quality
+
+Type‑safe everywhere; strict TS.
+
+Unit tests for SRS date generation and overdue/snooze logic (Vitest).
+
+Lighthouse pass: PWA installable, offline capable; manifest + icons.
+
+Accessibility: proper labels, focus states, keyboard navigation.
+
+
+
+---
+
+Project Structure
+
+src/
+  components/
+  pages/
+  store/
+  data/
+  lib/
+  routes.tsx
+  main.tsx
+  App.tsx
+public/
+
+
+---
+
+Deployment (GitHub Pages)
+
+Include GitHub Actions workflow .github/workflows/deploy.yml that builds on push to main and deploys to gh-pages branch using actions/setup-node and peaceiris/actions-gh-pages.
+
+Vite base path set from package.json homepage or VITE_BASE.
+
+README must include: 1) how to set VITE_NEET_DATE, 2) how to change repo name and base path, 3) how to trigger deploy.
+
+
+
+---
+
+Acceptance Criteria (must have)
+
+Adding a topic today instantly creates review tasks for D+4, +7, +14, +28, +40 (visible in Calendar and Dashboard queue).
+
+Calendar shows counts by day; clicking a day reveals review list.
+
+Full syllabus is preloaded and selectable (subject → chapter → topic) with difficulty labels.
+
+Files page supports upload, tag, move, delete, open in new tab.
+
+Tests page stores overall + subject‑wise marks and charts show trends over time.
+
+Progress page shows % mastery by difficulty and SRS on‑time vs late.
+
+Dashboard displays a one‑line brutal motivation with no heading and a countdown tile.
+
+All data persists across refresh; export/import works.
+
+App builds and deploys to GitHub Pages without server.
+
+
+
+---
+
+Nice‑to‑Have (if time)
+
+Smart clash warnings when many reviews fall on the same day
+
+CSV import for syllabus customization
+
+Quick PDF highlight notes (client‑side only)
+
+Simple Pomodoro timer
+
+
+
+---
+
+Seed Examples (include in data file to show structure)
+
+// Physics → Mechanics
+{ subject: 'Physics', chapters: [
+  { id:'phy-mech', name:'Laws of Motion', difficulty:'Medium', topics:[
+    { id:'newton-laws', name:'Newton’s Laws & Free-Body Diagrams', difficulty:'Medium' },
+    { id:'friction', name:'Friction & Inclined Planes', difficulty:'Hard' },
+    { id:'circular', name:'Circular Motion Basics', difficulty:'Medium' }
+  ]},
+  { id:'phy-kin', name:'Kinematics', difficulty:'Easy', topics:[
+    { id:'1d2d', name:'1D/2D Motion & Projectile', difficulty:'Easy' },
+    { id:'rel-vel', name:'Relative Velocity', difficulty:'Medium' }
+  ]}
+] }
+
+> Replace the above with the full NEET syllabus split across files.
+
+
+
+
+

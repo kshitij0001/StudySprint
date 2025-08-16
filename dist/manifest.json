@@ -1,0 +1,22 @@
+{
+  "name": "NEET 2026 Spaced Revision",
+  "short_name": "NEET 2026",
+  "description": "Comprehensive NEET 2026 preparation app with spaced repetition, analytics, and offline functionality",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "productivity"],
+  "lang": "en",
+  "scope": "/",
+  "prefer_related_applications": false
+}

@@ -1,0 +1,26 @@
+modules = ["nodejs-20", "web"]
+compile = "make"
+run = "run"
+
+[nix]
+channel = "stable-25_05"
+
+[deployment]
+build = ["sh", "-c", "make"]
+run = ["sh", "-c", "run"]
+
+[workflows]
+runButton = "Development Server"
+
+[[workflows.workflow]]
+name = "Development Server"
+author = 46503810
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd client && npm run dev"
+
+[[ports]]
+localPort = 5173
+externalPort = 80
