@@ -1,0 +1,106 @@
+Optimized Instructions for AI to Fix Your Web App
+1. UI / Styling Improvements
+
+Glassmorphism
+
+Apply glassmorphism style to all dropdowns, difficulty buttons, bottom bar, and popups.
+
+Popups: When opened, the background should blur behind them.
+
+Difficulty Buttons
+
+Center them on the page.
+
+Slightly colored edges to indicate difficulty.
+
+Difficulty of a chapter = average of its topics.
+
+Bottom Bar
+
+Make it glassmorphic instead of transparent.
+
+Keep 3 main icons visible + 1 hamburger menu.
+
+Additional items appear when hamburger is clicked (bottom bar rises).
+
+Bottom bar should remain hidden until user scrolls up.
+
+Theme / Dark-Light Mode
+
+Button should appear at the top, not fixed at the bottom.
+
+Switching theme should properly change the screen color, not stay white.
+
+Mobile Optimization
+
+Ensure all elements are properly visible on mobile.
+
+Avoid overlaps.
+
+Bottom bar behavior as above.
+
+Dropdowns, buttons, popups must scale correctly for mobile.
+
+2. Content Management / Adding Items
+
+Chapters & Topics
+
+User can add a chapter, then input its name.
+
+Within a chapter, user can add topics and name them.
+
+User should decide the difficulty for each topic.
+
+Difficulty of a chapter = average of its topics.
+
+Weekly Overview / Dashboard
+
+Remove fake data.
+
+Show dots for upcoming reviews:
+
+Dot color = subject.
+
+Dot size = difficulty or number of topics:
+
+Example: 2 topics in physics, 2 in chemistry, 2 in bio → 3 dots with size based on difficulty.
+
+Calendar / Schedule
+
+Remove fake entries.
+
+Automatically update when a new chapter/topic is added.
+
+User can tap on a date to see all items.
+
+Swipe gestures:
+
+Left → Remove
+
+Right → Mark as done
+
+Up → Snooze by 1 day
+
+Popups for dates should be glassmorphic with blurred background.
+
+3. Data / Fixes
+
+Dashboard
+
+Fix numbers showing incorrectly (currently “12” instead of actual count).
+
+Syllabus & Plan
+
+Fix incorrect date counts (currently 8/27, 8/29, 9/32).
+
+Ensure all calculations of difficulty, chapter averages, and topic counts are correct and dynamically updated.
+
+4. Bonus Enhancements
+
+Ensure smooth animations when showing/hiding bottom bar.
+
+All interactive elements should be mobile-friendly and responsive.
+
+Maintain consistent spacing and alignment.
+
+Avoid any transparency that hurts readability—prefer glassmorphism effects.

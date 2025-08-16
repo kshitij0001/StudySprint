@@ -16,7 +16,7 @@ export function MicroMotivation() {
   return (
     <Card className="p-6 border-border">
       <div className="text-center">
-        <div className="text-2xl mb-2">💪</div>
+        <div className="text-2xl mb-2"></div>
         <p className="text-sm text-muted-foreground font-medium" data-testid="text-motivation">
           {motivation}
         </p>
