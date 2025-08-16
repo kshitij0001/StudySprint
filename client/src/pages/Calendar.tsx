@@ -64,7 +64,7 @@ export default function Calendar() {
                     subject: subject,
                     chapter: chapter.name,
                     topic: topic.name,
-                    difficulty: topic.difficulty
+                    difficulty: topic.difficulty || 'Medium'
                   };
                 }
               }
@@ -89,29 +89,39 @@ export default function Calendar() {
       if (!topicInfo) return null;
       
       return {
+        id: session.id,
         date: new Date(session.createdAt),
         type: 'study',
         subject: topicInfo.subject,
         title: `${getSubjectPrefix(topicInfo.subject)} ${topicInfo.topic}`,
-        difficulty: topicInfo.difficulty
+        difficulty: topicInfo.difficulty,
+        sessionId: session.id
       };
     }).filter(Boolean),
-    ...reviewTasks.map(task => {
+    ...reviewTasks.filter(task => !task.doneAt).map(task => {
       const topicInfo = getTopicInfo(task.sessionId);
       if (!topicInfo) return null;
       
       return {
+        id: task.id,
         date: new Date(task.dueAt),
         type: isOverdue(task) ? 'overdue' : 'review',
         subject: topicInfo.subject,
         title: `${getSubjectPrefix(topicInfo.subject)} ${topicInfo.topic}`,
-        difficulty: topicInfo.difficulty
+        difficulty: topicInfo.difficulty,
+        task: task
       };
     }).filter(Boolean)
   ];
 
   const getEventsForDay = (day: Date) => {
     return events.filter(event => isSameDay(event.date, day));
+  };
+
+  const getReviewTasksForDay = (day: Date) => {
+    return reviewTasks.filter(task => 
+      !task.doneAt && isSameDay(new Date(task.dueAt), day)
+    );
   };
 
   const getEventColor = (event: any) => {
@@ -263,15 +273,12 @@ export default function Calendar() {
           </DialogHeader>
           <div className="space-y-3 max-h-96 overflow-y-auto">
             {selectedDay && (() => {
-              const dayTasks = getEventsForDay(selectedDay);
-              const reviewTasksForDay = reviewTasks.filter(task => 
-                !task.doneAt && isSameDay(new Date(task.dueAt), selectedDay)
-              );
+              const reviewTasksForDay = getReviewTasksForDay(selectedDay);
               
-              if (dayTasks.length === 0) {
+              if (reviewTasksForDay.length === 0) {
                 return (
                   <div className="text-center py-8 text-muted-foreground">
-                    <p>No tasks for this day</p>
+                    <p>No review tasks for this day</p>
                   </div>
                 );
               }

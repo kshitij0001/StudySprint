@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CountdownTimer } from '@/components/CountdownTimer';
 import { MicroMotivation } from '@/components/MicroMotivation';
@@ -8,9 +8,11 @@ import { QuickAddStudy } from '@/components/QuickAddStudy';
 import { useSrsStore } from '@/store/useSrsStore';
 import { useSyllabusStore } from '@/store/useSyllabusStore';
 import { Flame, CheckCircle, Brain, Clock } from 'lucide-react';
+import { format, isSameDay } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 export default function Dashboard() {
-  const { loadData, reviewTasks, getTodaysReviews, getOverdueReviews } = useSrsStore();
+  const { loadData, reviewTasks, getTodaysReviews, getOverdueReviews, getUpcomingReviews } = useSrsStore();
   const { loadSyllabus, syllabus } = useSyllabusStore();
 
   useEffect(() => {
@@ -56,6 +58,33 @@ export default function Dashboard() {
       bgColor: 'bg-amber-100 dark:bg-amber-900/20'
     }
   ];
+
+  const getSubjectCounts = (reviews) => {
+    const subjectGroups = reviews.reduce((groups, task) => {
+      let topicInfo = null;
+      for (const subjectData of syllabus) {
+        for (const chapter of subjectData.chapters) {
+          for (const topic of chapter.topics) {
+            if (topic.id === task.sessionId) {
+              topicInfo = { subject: subjectData.subject, difficulty: topic.difficulty };
+              break;
+            }
+          }
+          if (topicInfo) break;
+        }
+        if (topicInfo) break;
+      }
+
+      if (topicInfo) {
+        const key = `${topicInfo.subject}-${topicInfo.difficulty}`;
+        groups[key] = (groups[key] || { subject: topicInfo.subject, count: 0, difficulty: topicInfo.difficulty });
+        groups[key].count++;
+      }
+      return groups;
+    }, {} as Record<string, { subject: string, count: number, difficulty: string }>);
+
+    return Object.values(subjectGroups);
+  };
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
@@ -107,7 +136,7 @@ export default function Dashboard() {
               }
 
               const { addStudySession } = useSrsStore.getState();
-              
+
               // Add a few test study sessions
               for (let i = 0; i < 3 && i < syllabus[0].chapters[0].topics.length; i++) {
                 const topic = syllabus[0].chapters[0].topics[i];
@@ -118,7 +147,7 @@ export default function Dashboard() {
                   topicId: topic.id
                 }, `Test notes for ${topic.name}`);
               }
-              
+
               console.log('Added test study sessions with review tasks');
             }}
             variant="outline"
@@ -131,112 +160,106 @@ export default function Dashboard() {
 
       {/* Upcoming Reviews Preview */}
       <Card>
-        <div className="p-6 border-b border-border">
-          <h3 className="text-lg font-semibold">Upcoming Reviews</h3>
-        </div>
-        <CardContent className="p-6">
-          <div className="grid grid-cols-7 gap-4">
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Clock className="mr-2 h-5 w-5" />
+            Upcoming Reviews (Next 7 Days)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
             {Array.from({ length: 7 }, (_, i) => {
               const date = new Date();
               date.setDate(date.getDate() + i + 1);
-              const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
-              const dayNumber = date.getDate();
-
-              // Get actual reviews for this date
-              const reviewsForDay = reviewTasks.filter(task => {
-                if (task.doneAt) return false;
-                const taskDate = new Date(task.dueAt);
-                return taskDate.toDateString() === date.toDateString();
-              });
-
-              // Group reviews by subject and difficulty
-              const subjectGroups = reviewsForDay.reduce((groups, task) => {
-                // Find topic info from syllabus
-                let topicInfo = null;
-                for (const subject of syllabus) {
-                  for (const chapter of subject.chapters) {
-                    for (const topic of chapter.topics) {
-                      if (topic.id === task.sessionId) {
-                        topicInfo = { subject: subject.subject, difficulty: topic.difficulty };
-                        break;
-                      }
-                    }
-                    if (topicInfo) break;
-                  }
-                  if (topicInfo) break;
-                }
-
-                if (topicInfo) {
-                  const key = `${topicInfo.subject}-${topicInfo.difficulty}`;
-                  groups[key] = (groups[key] || 0) + 1;
-                }
-                return groups;
-              }, {} as Record<string, number>);
-
-              const getSubjectColor = (subject: string) => {
-                switch (subject) {
-                  case 'Physics': return 'bg-blue-500';
-                  case 'Chemistry': return 'bg-green-500';
-                  case 'Biology': return 'bg-purple-500';
-                  default: return 'bg-gray-500';
-                }
-              };
-
-              const getDifficultySize = (difficulty: string, count: number) => {
-                const baseSize = difficulty === 'Hard' ? 3 : difficulty === 'Medium' ? 2.5 : 2;
-                const sizeMultiplier = Math.min(1 + (count - 1) * 0.2, 2);
-                return baseSize * sizeMultiplier;
-              };
+              const dayReviews = getUpcomingReviews(7).filter(task => 
+                isSameDay(new Date(task.dueAt), date)
+              );
 
               return (
-                <div key={i} className="text-center" data-testid={`upcoming-day-${i}`}>
-                  <div className="text-xs text-muted-foreground mb-2">{dayName}</div>
-                  <div className="text-sm font-medium mb-2">{dayNumber}</div>
-                  <div className="space-y-1 min-h-[60px] flex flex-col items-center justify-center">
-                    {Object.entries(subjectGroups).length > 0 ? (
-                      <>
-                        <div className="flex flex-wrap gap-1 justify-center">
-                          {Object.entries(subjectGroups).map(([key, count]) => {
-                            const [subject, difficulty] = key.split('-');
-                            const size = getDifficultySize(difficulty, count);
-                            return (
-                              <div
-                                key={key}
-                                className={`${getSubjectColor(subject)} rounded-full opacity-80`}
-                                style={{ width: `${size * 4}px`, height: `${size * 4}px` }}
-                                title={`${subject} (${difficulty}): ${count} reviews`}
-                              />
-                            );
-                          })}
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-1">
-                          {reviewsForDay.length} due
-                        </div>
-                      </>
-                    ) : (
-                      <div className="text-xs text-muted-foreground">0 due</div>
-                    )}
+                <div key={i} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div>
+                    <p className="font-medium">{format(date, 'EEE, MMM d')}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {dayReviews.length} review{dayReviews.length !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                  <div className="flex space-x-1">
+                    {getSubjectCounts(dayReviews).map(({ subject, count, difficulty }) => (
+                      <div
+                        key={subject}
+                        className={cn(
+                          'w-3 h-3 rounded-full',
+                          subject === 'Physics' && 'bg-blue-500',
+                          subject === 'Chemistry' && 'bg-green-500',
+                          subject === 'Biology' && 'bg-purple-500'
+                        )}
+                        style={{
+                          transform: `scale(${Math.min(1 + (count - 1) * 0.3, 2)})`
+                        }}
+                        title={`${subject}: ${count} review${count !== 1 ? 's' : ''} (${difficulty})`}
+                      />
+                    ))}
                   </div>
                 </div>
               );
             })}
           </div>
-          <div className="mt-4 flex items-center justify-center space-x-4 text-xs">
-            <div className="flex items-center">
-              <div className="w-2 h-2 bg-blue-500 rounded-full mr-1"></div>
-              <span className="text-muted-foreground">Physics</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
-              <span className="text-muted-foreground">Chemistry</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-2 h-2 bg-purple-500 rounded-full mr-1"></div>
-              <span className="text-muted-foreground">Biology</span>
-            </div>
-            <div className="mt-2 text-xs text-muted-foreground">
-              Larger dots = harder topics or more reviews
-            </div>
+        </CardContent>
+      </Card>
+
+      {/* Calendar View */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Clock className="mr-2 h-5 w-5" />
+            Review Calendar
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-7 gap-4 text-center">
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+              <div key={day} className="text-xs font-medium text-muted-foreground py-2">{day}</div>
+            ))}
+            {Array.from({ length: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate() }, (_, i) => {
+              const currentDate = new Date(new Date().getFullYear(), new Date().getMonth(), i + 1);
+              const dayReviews = reviewTasks.filter(task => 
+                !task.doneAt && isSameDay(new Date(task.dueAt), currentDate)
+              );
+              const subjectCounts = getSubjectCounts(dayReviews);
+
+              return (
+                <div
+                  key={i}
+                  className={`relative p-2 border rounded-md h-24 flex flex-col items-center justify-start ${
+                    isSameDay(currentDate, new Date()) ? 'border-primary' : ''
+                  }`}
+                >
+                  <span className={`text-sm font-medium ${isSameDay(currentDate, new Date()) ? 'text-primary' : ''}`}>
+                    {currentDate.getDate()}
+                  </span>
+                  <div className="flex flex-wrap gap-0.5 justify-center mt-1">
+                    {subjectCounts.map(({ subject, count, difficulty }) => (
+                      <div
+                        key={`${subject}-${difficulty}`}
+                        className={cn(
+                          'w-1.5 h-1.5 rounded-full',
+                          subject === 'Physics' && 'bg-blue-500',
+                          subject === 'Chemistry' && 'bg-green-500',
+                          subject === 'Biology' && 'bg-purple-500'
+                        )}
+                        style={{
+                          transform: `scale(${Math.min(1 + (count - 1) * 0.2, 1.5)})`
+                        }}
+                        title={`${subject}: ${count} reviews (${difficulty})`}
+                      />
+                    ))}
+                  </div>
+                  {dayReviews.length > 0 && (
+                    <div className="text-xs text-muted-foreground mt-1">{dayReviews.length} due</div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
