@@ -14,7 +14,7 @@ export default function Calendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<'month' | 'week' | 'day'>('month');
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
-  const { studySessions, reviewTasks, markReviewComplete, snoozeReview, removeReviewTask } = useSrsStore();
+  const { studySessions, reviewTasks, markReviewComplete, snoozeReview, removeReviewTask, loadData } = useSrsStore();
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -255,7 +255,7 @@ export default function Calendar() {
 
       {/* Day View Modal */}
       <Dialog open={!!selectedDay} onOpenChange={() => setSelectedDay(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md backdrop-blur-xl bg-background/95 border border-border/50 shadow-2xl">
           <DialogHeader>
             <DialogTitle>
               {selectedDay && format(selectedDay, 'EEEE, MMMM d, yyyy')}
@@ -288,9 +288,18 @@ export default function Calendar() {
                     task={task}
                     topicInfo={topicInfo}
                     isOverdue={taskIsOverdue}
-                    onComplete={() => markReviewComplete(task.id)}
-                    onSnooze={() => snoozeReview(task.id, 1)}
-                    onRemove={() => removeReviewTask(task.id)}
+                    onComplete={async () => {
+                      await markReviewComplete(task.id);
+                      await loadData();
+                    }}
+                    onSnooze={async () => {
+                      await snoozeReview(task.id, 1);
+                      await loadData();
+                    }}
+                    onRemove={async () => {
+                      await removeReviewTask(task.id);
+                      await loadData();
+                    }}
                   />
                 );
               });
@@ -361,22 +370,22 @@ function SwipeableTaskCard({ task, topicInfo, isOverdue, onComplete, onSnooze, o
     setDragOffset({ x: deltaX, y: deltaY });
   };
 
-  const handleTouchEnd = () => {
+  const handleTouchEnd = async () => {
     if (!isDragging) return;
     
     const threshold = 100;
     
     // Left swipe - Remove
     if (dragOffset.x < -threshold) {
-      onRemove();
+      await onRemove();
     }
     // Right swipe - Complete
     else if (dragOffset.x > threshold) {
-      onComplete();
+      await onComplete();
     }
     // Up swipe - Snooze
     else if (dragOffset.y < -threshold) {
-      onSnooze();
+      await onSnooze();
     }
     
     setDragOffset({ x: 0, y: 0 });
@@ -395,17 +404,17 @@ function SwipeableTaskCard({ task, topicInfo, isOverdue, onComplete, onSnooze, o
     setDragOffset({ x: deltaX, y: deltaY });
   };
 
-  const handleMouseUp = () => {
+  const handleMouseUp = async () => {
     if (!isDragging) return;
     
     const threshold = 100;
     
     if (dragOffset.x < -threshold) {
-      onRemove();
+      await onRemove();
     } else if (dragOffset.x > threshold) {
-      onComplete();
+      await onComplete();
     } else if (dragOffset.y < -threshold) {
-      onSnooze();
+      await onSnooze();
     }
     
     setDragOffset({ x: 0, y: 0 });
@@ -490,7 +499,7 @@ function SwipeableTaskCard({ task, topicInfo, isOverdue, onComplete, onSnooze, o
         <Button
           variant="ghost"
           size="sm"
-          onClick={onSnooze}
+          onClick={async () => await onSnooze()}
           className="hidden md:flex"
         >
           <Clock className="w-4 h-4" />
@@ -498,7 +507,7 @@ function SwipeableTaskCard({ task, topicInfo, isOverdue, onComplete, onSnooze, o
         <Button
           variant="ghost"
           size="sm"
-          onClick={onComplete}
+          onClick={async () => await onComplete()}
           className="hidden md:flex"
         >
           <Check className="w-4 h-4" />
@@ -506,7 +515,7 @@ function SwipeableTaskCard({ task, topicInfo, isOverdue, onComplete, onSnooze, o
         <Button
           variant="ghost"
           size="sm"
-          onClick={onRemove}
+          onClick={async () => await onRemove()}
           className="hidden md:flex"
         >
           <Trash2 className="w-4 h-4" />
