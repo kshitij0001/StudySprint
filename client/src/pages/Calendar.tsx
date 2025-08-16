@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, startOfWeek, endOfWeek } from 'date-fns';
 import { useSrsStore } from '@/store/useSrsStore';
+import { useSyllabusStore } from '@/store/useSyllabusStore';
+import { isOverdue } from '@/lib/srs';
 
 export default function Calendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -33,6 +35,8 @@ export default function Calendar() {
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   // Get events from study sessions and review tasks
+  const { syllabus } = useSyllabusStore();
+  
   const getSubjectPrefix = (subject: string) => {
     switch (subject) {
       case 'Physics': return 'Phy.';
@@ -42,21 +46,49 @@ export default function Calendar() {
     }
   };
 
+  const getTopicInfo = (sessionId: string) => {
+    for (const subject of syllabus) {
+      for (const chapter of subject.chapters) {
+        for (const topic of chapter.topics) {
+          if (topic.id === sessionId) {
+            return {
+              subject: subject.subject,
+              chapter: chapter.name,
+              topic: topic.name,
+              difficulty: topic.difficulty
+            };
+          }
+        }
+      }
+    }
+    return null;
+  };
+
   const events = [
-    ...studySessions.map(session => ({
-      date: new Date(session.createdAt),
-      type: 'study',
-      subject: session.subject,
-      title: `${getSubjectPrefix(session.subject)} ${session.topicName || 'Topic'}`,
-      difficulty: session.difficulty
-    })),
-    ...reviewTasks.map(task => ({
-      date: new Date(task.dueDate),
-      type: task.isOverdue ? 'overdue' : 'review',
-      subject: task.subject,
-      title: `${getSubjectPrefix(task.subject)} ${task.topicName || 'Topic'}`,
-      difficulty: task.difficulty
-    }))
+    ...studySessions.map(session => {
+      const topicInfo = getTopicInfo(session.topic.id);
+      if (!topicInfo) return null;
+      
+      return {
+        date: new Date(session.createdAt),
+        type: 'study',
+        subject: topicInfo.subject,
+        title: `${getSubjectPrefix(topicInfo.subject)} ${topicInfo.topic}`,
+        difficulty: topicInfo.difficulty
+      };
+    }).filter(Boolean),
+    ...reviewTasks.map(task => {
+      const topicInfo = getTopicInfo(task.sessionId);
+      if (!topicInfo) return null;
+      
+      return {
+        date: new Date(task.dueAt),
+        type: isOverdue(task) ? 'overdue' : 'review',
+        subject: topicInfo.subject,
+        title: `${getSubjectPrefix(topicInfo.subject)} ${topicInfo.topic}`,
+        difficulty: topicInfo.difficulty
+      };
+    }).filter(Boolean)
   ];
 
   const getEventsForDay = (day: Date) => {

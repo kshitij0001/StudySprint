@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { CountdownTimer } from '@/components/CountdownTimer';
 import { MicroMotivation } from '@/components/MicroMotivation';
 import { SrsQueue } from '@/components/SrsQueue';
@@ -92,6 +93,23 @@ export default function Dashboard() {
         <QuickAddStudy />
       </div>
 
+      {/* Test Button for Development */}
+      <Card>
+        <CardContent className="p-6">
+          <h3 className="font-semibold mb-4">Testing (Dev Only)</h3>
+          <Button
+            onClick={async () => {
+              const { addTestReviewTasks } = useSrsStore.getState();
+              await addTestReviewTasks();
+            }}
+            variant="outline"
+            size="sm"
+          >
+            Add Test Review Tasks (Due Today)
+          </Button>
+        </CardContent>
+      </Card>
+
       {/* Upcoming Reviews Preview */}
       <Card>
         <div className="p-6 border-b border-border">
@@ -104,25 +122,33 @@ export default function Dashboard() {
               date.setDate(date.getDate() + i + 1);
               const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
               const dayNumber = date.getDate();
-              
-              // Get actual reviews for this date (currently none)
+
+              // Get actual reviews for this date
               const reviewsForDay = reviewTasks.filter(task => {
                 const taskDate = new Date(task.dueDate);
                 return taskDate.toDateString() === date.toDateString();
               });
-              
+
+              // Get actual study sessions for this date
+              const studySessionsForDay = Array.from({ length: 1 }, () => ({ // Placeholder for actual study session data
+                topicName: 'Placeholder Topic',
+                subject: 'Placeholder Subject',
+              })); // Replace with actual study session fetching logic if available
+
+              const allDueItems = [...reviewsForDay, ...studySessionsForDay];
+
               return (
                 <div key={i} className="text-center" data-testid={`upcoming-day-${i}`}>
                   <div className="text-xs text-muted-foreground mb-2">{dayName}</div>
                   <div className="text-sm font-medium mb-2">{dayNumber}</div>
                   <div className="space-y-1">
-                    {reviewsForDay.length > 0 && (
+                    {allDueItems.length > 0 && (
                       <>
                         <div className="w-2 h-2 bg-blue-500 rounded-full mx-auto"></div>
-                        <div className="text-xs text-muted-foreground">{reviewsForDay.length} due</div>
+                        <div className="text-xs text-muted-foreground">{allDueItems.length} due</div>
                       </>
                     )}
-                    {reviewsForDay.length === 0 && (
+                    {allDueItems.length === 0 && (
                       <div className="text-xs text-muted-foreground">0 due</div>
                     )}
                   </div>

@@ -108,5 +108,23 @@ export const useSrsStore = create<SrsState>((set, get) => ({
       new Date(task.dueAt) > now && 
       new Date(task.dueAt) <= future
     );
+  },
+
+  // Test function to create review tasks due today for testing snooze
+  addTestReviewTasks: async () => {
+    const { studySessions, reviewTasks } = get();
+    const today = new Date();
+    
+    if (studySessions.length === 0) return;
+    
+    const testTasks = studySessions.slice(0, 3).map(session => ({
+      id: crypto.randomUUID(),
+      sessionId: session.id,
+      dueAt: today.toISOString(),
+    }));
+    
+    const updatedTasks = [...reviewTasks, ...testTasks];
+    await db.setReviewTasks(updatedTasks);
+    set({ reviewTasks: updatedTasks });
   }
 }));
