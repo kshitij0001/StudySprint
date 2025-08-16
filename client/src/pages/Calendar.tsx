@@ -46,19 +46,34 @@ export default function Calendar() {
     }
   };
 
-  const getTopicInfo = (sessionId: string) => {
-    for (const subject of syllabus) {
-      for (const chapter of subject.chapters) {
-        for (const topic of chapter.topics) {
-          if (topic.id === sessionId) {
-            return {
-              subject: subject.subject,
-              chapter: chapter.name,
-              topic: topic.name,
-              difficulty: topic.difficulty
-            };
+  const getTopicInfo = (topicRef: any) => {
+    // If it's a session, use the topic reference
+    if (topicRef.topic) {
+      const { subject, chapterId, topicId } = topicRef.topic;
+      for (const subjectData of syllabus) {
+        if (subjectData.subject === subject) {
+          for (const chapter of subjectData.chapters) {
+            if (chapter.id === chapterId) {
+              for (const topic of chapter.topics) {
+                if (topic.id === topicId) {
+                  return {
+                    subject: subject,
+                    chapter: chapter.name,
+                    topic: topic.name,
+                    difficulty: topic.difficulty
+                  };
+                }
+              }
+            }
           }
         }
+      }
+    }
+    // If it's a sessionId (for review tasks), find the session first
+    else {
+      const session = studySessions.find(s => s.id === topicRef);
+      if (session) {
+        return getTopicInfo(session);
       }
     }
     return null;
@@ -66,7 +81,7 @@ export default function Calendar() {
 
   const events = [
     ...studySessions.map(session => {
-      const topicInfo = getTopicInfo(session.topic.id);
+      const topicInfo = getTopicInfo(session);
       if (!topicInfo) return null;
       
       return {

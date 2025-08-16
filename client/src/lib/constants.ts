@@ -1,4 +1,4 @@
-export const SRS_OFFSETS = [0, 4, 7, 14, 28, 40];
+export const SRS_OFFSETS = [1, 4, 7, 14, 28, 40];
 
 export const NEET_DATE = import.meta.env.VITE_NEET_DATE || '2026-05-03T09:00:00+05:30';
 

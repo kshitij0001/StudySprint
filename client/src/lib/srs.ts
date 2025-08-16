@@ -6,7 +6,7 @@ export function generateReviewTasks(session: StudySession): ReviewTask[] {
   const baseDate = new Date(session.createdAt);
   const baseDayStart = startOfDay(baseDate);
   
-  return SRS_OFFSETS.slice(1).map((offset, index) => {
+  return SRS_OFFSETS.map((offset, index) => {
     const dueDate = addDays(baseDayStart, offset);
     
     return {

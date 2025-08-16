@@ -11,7 +11,7 @@ import { Flame, CheckCircle, Brain, Clock } from 'lucide-react';
 
 export default function Dashboard() {
   const { loadData, reviewTasks, getTodaysReviews, getOverdueReviews } = useSrsStore();
-  const { loadSyllabus } = useSyllabusStore();
+  const { loadSyllabus, syllabus } = useSyllabusStore();
 
   useEffect(() => {
     loadData();
@@ -99,13 +99,32 @@ export default function Dashboard() {
           <h3 className="font-semibold mb-4">Testing (Dev Only)</h3>
           <Button
             onClick={async () => {
-              const { addTestReviewTasks } = useSrsStore.getState();
-              await addTestReviewTasks();
+              // Create test study sessions first
+              const { syllabus } = useSyllabusStore.getState();
+              if (syllabus.length === 0) {
+                console.log('No syllabus data available');
+                return;
+              }
+
+              const { addStudySession } = useSrsStore.getState();
+              
+              // Add a few test study sessions
+              for (let i = 0; i < 3 && i < syllabus[0].chapters[0].topics.length; i++) {
+                const topic = syllabus[0].chapters[0].topics[i];
+                await addStudySession({
+                  id: topic.id,
+                  subject: syllabus[0].subject,
+                  chapterId: syllabus[0].chapters[0].id,
+                  topicId: topic.id
+                }, `Test notes for ${topic.name}`);
+              }
+              
+              console.log('Added test study sessions with review tasks');
             }}
             variant="outline"
             size="sm"
           >
-            Add Test Review Tasks (Due Today)
+            Add Test Study Sessions & Reviews
           </Button>
         </CardContent>
       </Card>
@@ -125,30 +144,76 @@ export default function Dashboard() {
 
               // Get actual reviews for this date
               const reviewsForDay = reviewTasks.filter(task => {
-                const taskDate = new Date(task.dueDate);
+                if (task.doneAt) return false;
+                const taskDate = new Date(task.dueAt);
                 return taskDate.toDateString() === date.toDateString();
               });
 
-              // Get actual study sessions for this date
-              const studySessionsForDay = Array.from({ length: 1 }, () => ({ // Placeholder for actual study session data
-                topicName: 'Placeholder Topic',
-                subject: 'Placeholder Subject',
-              })); // Replace with actual study session fetching logic if available
+              // Group reviews by subject and difficulty
+              const subjectGroups = reviewsForDay.reduce((groups, task) => {
+                // Find topic info from syllabus
+                let topicInfo = null;
+                for (const subject of syllabus) {
+                  for (const chapter of subject.chapters) {
+                    for (const topic of chapter.topics) {
+                      if (topic.id === task.sessionId) {
+                        topicInfo = { subject: subject.subject, difficulty: topic.difficulty };
+                        break;
+                      }
+                    }
+                    if (topicInfo) break;
+                  }
+                  if (topicInfo) break;
+                }
 
-              const allDueItems = [...reviewsForDay, ...studySessionsForDay];
+                if (topicInfo) {
+                  const key = `${topicInfo.subject}-${topicInfo.difficulty}`;
+                  groups[key] = (groups[key] || 0) + 1;
+                }
+                return groups;
+              }, {} as Record<string, number>);
+
+              const getSubjectColor = (subject: string) => {
+                switch (subject) {
+                  case 'Physics': return 'bg-blue-500';
+                  case 'Chemistry': return 'bg-green-500';
+                  case 'Biology': return 'bg-purple-500';
+                  default: return 'bg-gray-500';
+                }
+              };
+
+              const getDifficultySize = (difficulty: string, count: number) => {
+                const baseSize = difficulty === 'Hard' ? 3 : difficulty === 'Medium' ? 2.5 : 2;
+                const sizeMultiplier = Math.min(1 + (count - 1) * 0.2, 2);
+                return baseSize * sizeMultiplier;
+              };
 
               return (
                 <div key={i} className="text-center" data-testid={`upcoming-day-${i}`}>
                   <div className="text-xs text-muted-foreground mb-2">{dayName}</div>
                   <div className="text-sm font-medium mb-2">{dayNumber}</div>
-                  <div className="space-y-1">
-                    {allDueItems.length > 0 && (
+                  <div className="space-y-1 min-h-[60px] flex flex-col items-center justify-center">
+                    {Object.entries(subjectGroups).length > 0 ? (
                       <>
-                        <div className="w-2 h-2 bg-blue-500 rounded-full mx-auto"></div>
-                        <div className="text-xs text-muted-foreground">{allDueItems.length} due</div>
+                        <div className="flex flex-wrap gap-1 justify-center">
+                          {Object.entries(subjectGroups).map(([key, count]) => {
+                            const [subject, difficulty] = key.split('-');
+                            const size = getDifficultySize(difficulty, count);
+                            return (
+                              <div
+                                key={key}
+                                className={`${getSubjectColor(subject)} rounded-full opacity-80`}
+                                style={{ width: `${size * 4}px`, height: `${size * 4}px` }}
+                                title={`${subject} (${difficulty}): ${count} reviews`}
+                              />
+                            );
+                          })}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {reviewsForDay.length} due
+                        </div>
                       </>
-                    )}
-                    {allDueItems.length === 0 && (
+                    ) : (
                       <div className="text-xs text-muted-foreground">0 due</div>
                     )}
                   </div>
@@ -168,6 +233,9 @@ export default function Dashboard() {
             <div className="flex items-center">
               <div className="w-2 h-2 bg-purple-500 rounded-full mr-1"></div>
               <span className="text-muted-foreground">Biology</span>
+            </div>
+            <div className="mt-2 text-xs text-muted-foreground">
+              Larger dots = harder topics or more reviews
             </div>
           </div>
         </CardContent>
